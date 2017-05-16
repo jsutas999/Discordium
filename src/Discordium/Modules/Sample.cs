@@ -12,8 +12,6 @@ namespace Discordium.Modules
     public class Sample : ModuleBase<SocketCommandContext>
     {
 
-        String mem = "MEMES I NEED MEMS";
-
         [Command("say"), Summary("Echo of the wind")]
         public async Task Say([Remainder] string echo)
         {
