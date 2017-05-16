@@ -292,7 +292,8 @@ __pycache__/
 ffmpeg.exe
 libsodium.dll
 opus.dll
-audio/
 youtube-dl.exe
+audio/
+
 
 
