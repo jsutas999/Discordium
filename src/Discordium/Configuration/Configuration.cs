@@ -14,7 +14,7 @@ namespace Discordium
         /// <summary> Your bot's command prefix. </summary>
         public string Prefix { get; set; } = "!";
         /// <summary> Your bot's login token. </summary>
-        public string Token { get; set; } = "MzEzNjQyNTA0NDY3Nzc1NDg5.C_svKw.gg9YLVI1bcVK3b9df4WD0G6agdQ";
+        public string Token { get; set; } = "";
 
         public static void EnsureExists()
         {
