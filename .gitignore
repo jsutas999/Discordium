@@ -293,5 +293,6 @@ ffmpeg.exe
 libsodium.dll
 opus.dll
 audio/
+youtube-dl.exe
 
 
