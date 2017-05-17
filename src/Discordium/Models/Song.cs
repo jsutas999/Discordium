@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Discordium.Models
 {
-    class Song
+    public class Song
     {
 
         public string filename;

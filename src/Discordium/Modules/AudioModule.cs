@@ -34,5 +34,15 @@ namespace Discordium.Module
             channel = channel ?? (Context.Message.Author as IGuildUser)?.VoiceChannel;
             await _service.AddSong(Context.Guild,channel,uri);
         }
+
+        [Command("Skip")]
+        public async Task SkipSong()
+        {
+            await ReplyAsync("God bless memes");
+            _service.Skip(Context.Guild);
+        }
+
+
+
     }
 }

@@ -9,13 +9,16 @@ using System;
 using Discordium.Models;
 using System.Text;
 using System.Security.Cryptography;
+using System.Collections.Generic;
 
 namespace Discordium.Services
 {
     public class AudioService
     {
-        private readonly ConcurrentDictionary<ulong, IAudioClient> ConnectedChannels = new ConcurrentDictionary<ulong, IAudioClient>();
-        private readonly ConcurrentDictionary<ulong, ConcurrentQueue<Song>> SongQueues = new ConcurrentDictionary<ulong, ConcurrentQueue<Song>>();
+
+        private readonly ConcurrentDictionary<ulong, GuildVoiceContext> _guildVoiceContext = new ConcurrentDictionary<ulong, GuildVoiceContext>();
+
+        private static Process killer;
 
         private readonly CommandService _commands;
         private readonly IServiceProvider _provider;
@@ -26,77 +29,81 @@ namespace Discordium.Services
             _provider = provider;
         }
 
-
         public async Task<int> AddSong(IGuild guild,IVoiceChannel target, string uri)
         {
-
             string fname = HashFileName(uri);
             bool gotTheFile = await getSongFromYoutubes(uri, fname);
 
             if (gotTheFile)
             {
-
-                ConcurrentQueue<Song> queue;
-                if(!SongQueues.TryGetValue(guild.Id,out queue))
+                GuildVoiceContext audiocon;
+               if(!_guildVoiceContext.TryGetValue(guild.Id,out audiocon))
                 {
-                    queue = new ConcurrentQueue<Song>();
-                    if(!SongQueues.TryAdd(guild.Id,queue))
+                    audiocon = new GuildVoiceContext();
+                    audiocon.queue = new Queue<Song>();
+
+                    if(!_guildVoiceContext.TryAdd(guild.Id,audiocon))
                     {
                         return -1;
                     }
+
                 }
-
-                queue.Enqueue(new Song(fname));
-                await JoinAudio(guild,target);
-
+                audiocon.queue.Enqueue(new Song(fname));
+                await JoinAudio(guild,target,audiocon);
             }
 
             return 0;
         }
 
-        public async Task JoinAudio(IGuild guid, IVoiceChannel target)
+        public async Task JoinAudio(IGuild guid, IVoiceChannel target, GuildVoiceContext gvc)
         {
-            IAudioClient client;
 
-            if(ConnectedChannels.TryGetValue(guid.Id, out client))
+
+            if(gvc.client != null )
             {        
                 return;
             }
+
             if(target.Id == guid.Id)
             {
                 return;
             }
-            var audioClient = await target.ConnectAsync();
+            gvc.client = await target.ConnectAsync();
 
-            if(ConnectedChannels.TryAdd(guid.Id,audioClient))
-            {
                 Console.WriteLine("Connected voice on: " + guid.Name);
 
-                ConcurrentQueue<Song> queue;
-                if (SongQueues.TryGetValue(guid.Id, out queue))
-                {
-                    if (queue.Count > 0)
+                    if (gvc.queue.Count > 0)
                     {
-                        Song song;
-                        if (queue.TryDequeue(out song))
-                        {
-                            string filnename = "audio\\" + song.filename + ".m4a";
-                            await SendAudioAsync(guid, null, filnename);
-                        }
-                    }
+                        Song song = gvc.queue.Dequeue();
+                        string filnename = "audio\\" + song.filename + ".m4a";
+                        await SendAudioAsync(guid, null, filnename,gvc);
+                    }        
+        }
+
+        public async Task LeaveAudio(IGuild guild, GuildVoiceContext gvc = null)
+        {
+            if(gvc == null)
+                if (!_guildVoiceContext.TryGetValue(guild.Id, out gvc))
+                {
+                    Console.Write("ERRORS LEAVING");
+                    return;
                 }
 
+            await gvc.client.StopAsync();
+            gvc.client = null;
+
+        }
+
+
+        public void  Skip(IGuild guild)
+        {
+            GuildVoiceContext gvc;
+            if(_guildVoiceContext.TryGetValue(guild.Id,out gvc))
+            {
+                gvc.player.Kill();
             }
         }
 
-        public async Task LeaveAudio(IGuild guid)
-        {
-            IAudioClient client;
-            if(ConnectedChannels.TryRemove (guid.Id, out client) )
-            {
-                await client.StopAsync();
-            }
-        }
 
         private Process CreateStreamFFMPEG(string path)
         {
@@ -122,35 +129,26 @@ namespace Discordium.Services
             return Process.Start(ytdl);
         }
 
-        private async Task SendAudioAsync(IGuild guild, IMessageChannel channel,string path)
+        private async Task SendAudioAsync(IGuild guild, IMessageChannel channel,string path,GuildVoiceContext gvc)
         {
 
-            IAudioClient audioclient;
-
-            if(ConnectedChannels.TryGetValue(guild.Id,out audioclient))
-            {
-                var ffmpeg = CreateStreamFFMPEG(path);
+                gvc.player = CreateStreamFFMPEG(path);
+                var ffmpeg = gvc.player;
                 var output = ffmpeg.StandardOutput.BaseStream;
-                var discord = audioclient.CreatePCMStream(AudioApplication.Mixed, 96000);
+                var discord = gvc.client.CreatePCMStream(AudioApplication.Mixed, 96000);
                 await output.CopyToAsync(discord);
                 await discord.FlushAsync();
 
-                ConcurrentQueue<Song> queue;
-                if (SongQueues.TryGetValue(guild.Id, out queue) )
+                if(gvc.queue.Count > 0)
                 {
-                    if (queue.Count > 0)
-                    {
-                        Song song;
-                        if(queue.TryDequeue(out song))
-                        {
-                            string filnename = "audio\\" + song.filename + ".m4a";
-                            await SendAudioAsync(guild, channel, filnename);
-                        }
-                    }
-                }
-                if (audioclient.ConnectionState == ConnectionState.Connected && queue.Count == 0)
+                    Song song = gvc.queue.Dequeue();
+                    string filnename = "audio\\" + song.filename + ".m4a";
+                    await SendAudioAsync(guild, channel, filnename,gvc);
+
+
+                 }          
+                if (gvc.client.ConnectionState == ConnectionState.Connected && gvc.queue.Count == 0)
                     await LeaveAudio(guild);
-            }
         }
 
         private async Task<bool> getSongFromYoutubes(string uri, string fname)
@@ -166,6 +164,7 @@ namespace Discordium.Services
 
 
         }
+
         private string HashFileName(string filename)
         {
             string output;
@@ -178,13 +177,9 @@ namespace Discordium.Services
                 {
                     sb.Append(data[i].ToString("x2"));
                 }
-
                 output = sb.ToString();
-
             }
-
             return output;
-
         }
     }
 }
