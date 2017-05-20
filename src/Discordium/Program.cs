@@ -19,7 +19,7 @@ namespace Discordium
         public async Task StartAsync()
         {
             Configuration.EnsureExists();                    // Ensure the configuration file has been created.
-                                                             // Create a new instance of DiscordSocketClient.
+                                                             // Create a new instance of DiscordSocketClient.   
             _client = new DiscordSocketClient(new DiscordSocketConfig()
             {
             #if DEBUG
@@ -55,11 +55,5 @@ namespace Discordium
 
             return provider;
         }
-
     }
-
-
-    
-
-
 }

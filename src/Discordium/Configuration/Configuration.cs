@@ -15,6 +15,11 @@ namespace Discordium
         public string Prefix { get; set; } = "!";
         /// <summary> Your bot's login token. </summary>
         public string Token { get; set; } = "";
+        /// <summary> Your Youtube API  token. </summary>
+        public string YtToken { get; set; } = "";
+
+        private static string syToken = "";
+
 
         public static void EnsureExists()
         {
@@ -30,7 +35,12 @@ namespace Discordium
                 Console.WriteLine("Please enter your token: ");
                 string token = Console.ReadLine();                  // Read the bot token from console.
 
+                Console.WriteLine("Please enter your YT token");
+                string ytoken = Console.ReadLine();
+
                 config.Token = token;
+                config.YtToken = ytoken;
+                Configuration.syToken = ytoken;
                 config.SaveJson();                                  // Save the new configuration object to file.
             }
             Console.WriteLine("Configuration Loaded");
@@ -47,11 +57,19 @@ namespace Discordium
         public static Configuration Load()
         {
             string file = Path.Combine(AppContext.BaseDirectory, FileName);
-            return JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(file));
+
+            Configuration cf = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(file));
+            Configuration.syToken = cf.YtToken;
+            return cf;
         }
 
         /// <summary> Convert the configuration to a json string. </summary>
         public string ToJson()
             => JsonConvert.SerializeObject(this, Formatting.Indented);
+
+        public static string getYtToken()
+        {
+            return syToken;
+        }
     }
 }

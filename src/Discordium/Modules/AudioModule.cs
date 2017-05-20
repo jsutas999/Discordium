@@ -10,8 +10,6 @@ namespace Discordium.Module
 {
     public class AudioModule : ModuleBase<SocketCommandContext>
     {
-
-        private static Queue<Song> queue = new Queue<Song>();
         private readonly AudioService _service;
 
         public AudioModule (AudioService service)
@@ -20,10 +18,26 @@ namespace Discordium.Module
         }
 
         [Command("play", RunMode = RunMode.Async), Summary("Joins voice chat")]
-        public async Task JoinChannel(string uri ,IVoiceChannel channel = null)
+        public async Task JoinChannel([Remainder] string uri)
         {
-            channel = channel ?? (Context.Message.Author as IGuildUser)?.VoiceChannel;
-            string song  = await _service.AddSong(Context.Guild,channel,uri);
+
+            IVoiceChannel channel = (Context.Message.Author as IGuildUser).VoiceChannel;
+
+            if(channel == null)
+            {
+                await ReplyAsync("You should join a voice channel");
+                return;
+            }
+
+            List<Song> s = await _service.getSuggestions(Context.Guild, uri);
+
+            if(s.Count == 0)
+            {
+                await ReplyAsync("No songs found with the search term");
+                return;
+            }
+
+            string song  = await _service.AddSong(Context.Guild,channel,s[0].wathchID);
 
             if (song != null)
                 await ReplyAsync("Added song:  " + "**" + song + "**");
@@ -79,5 +93,19 @@ namespace Discordium.Module
             else
                 await ReplyAsync(":no_entry_sign: I havent played any songs in a while");
         }
+
+        [Command("search")]
+        public async Task Search([Remainder] string tag)
+        {
+            List<Song> suggestions = await _service.getSuggestions(Context.Guild, tag);
+            string res = "";
+            foreach(Song s in suggestions)
+            {
+                res += s.songname + " " + s.duration + "\n";
+            }
+
+            await ReplyAsync(res);
+        }
+
     }
 }

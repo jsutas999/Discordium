@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Discord.Net" Version="1.0.0-rc2" />
+    <PackageReference Include="Microsoft.AspNet.WebUtilities" Version="1.0.0-rc1-final" />
   </ItemGroup>
 
   <ItemGroup>

@@ -7,9 +7,12 @@ using Discordium.Models;
 using Discord.Commands;
 using Discord.Audio;
 using System.Text;
+using System.Net;
 using System.IO;
 using Discord;
 using System;
+using System.Net.Http;
+using Newtonsoft.Json.Linq;
 
 namespace Discordium.Services
 {
@@ -47,7 +50,7 @@ namespace Discordium.Services
 
                 }
                 audiocon.queue.Enqueue(new Song(fname));
-                JoinAudio(guild,target,audiocon);
+                await JoinAudio(guild,target,audiocon);
 
                 return fname; 
 
@@ -192,7 +195,7 @@ namespace Discordium.Services
         public List<string> getQueue(IGuild guild)
         {
             GuildVoiceContext context;
-
+ 
             if (_guildVoiceContext.TryGetValue(guild.Id, out context))
             {
                 if (context.queue.Count > 0)
@@ -203,7 +206,6 @@ namespace Discordium.Services
                     {
                         songnames.Add(s.filename);
                     }
-
                     return songnames;
                 }            
             }
@@ -220,6 +222,77 @@ namespace Discordium.Services
                     return context.lastSong.filename;
             }
             return null;
+        }
+
+        public async Task< List<Song> > getSuggestions(IGuild guild, string tag)
+        {
+            string enc = System.Net.WebUtility.UrlEncode(tag);
+            Uri requesturl = new Uri("https://www.googleapis.com/youtube/v3/search?key=" + Configuration.getYtToken() + "&part=id&q=" + enc);
+            string info = await getJson(requesturl);
+
+            JObject json = JObject.Parse(info);
+
+            List<string> videoIDs = new List<string>();
+
+            foreach (JObject j in json["items"])
+            {
+                string type = j["id"]["kind"].ToString();
+
+                if (type == "youtube#video")
+                {
+                    videoIDs.Add(j["id"]["videoId"].ToString());
+                }             
+            }
+
+            return await GetSongsInfo(videoIDs);
+            
+        }
+
+        private async Task < List<Song> >  GetSongsInfo(List<string> videoIDs)
+        {
+            if (videoIDs.Count == 0)
+                return null;
+
+            string tag = "";
+
+            for (int i = 0; i < videoIDs.Count; i++)
+            {
+                tag += videoIDs[i] + ",";
+            }
+
+             Uri requesturl = new Uri("https://www.googleapis.com/youtube/v3/videos?key=" + Configuration.getYtToken() + "&part=contentDetails,snippet&id=" + tag);
+
+            string info = await getJson(requesturl);
+            JObject json = JObject.Parse(info);
+
+            List<Song> suggestions = new List<Song>();
+            foreach (JObject j in json["items"])
+            {
+                string title = j["snippet"]["title"].ToString();
+                string watch = j["id"].ToString();
+                string vlen = j["contentDetails"]["duration"].ToString();
+                vlen = vlen.Substring(2, vlen.Length - 3);
+                vlen = vlen.Replace('M', ':');
+                vlen = vlen.Replace('H', ':');
+
+                Song s = new Song();
+                s.duration = vlen;
+                s.songname = title;
+                s.wathchID = watch;
+                suggestions.Add(s);
+
+            }
+
+            return suggestions;
+        }
+
+        public async Task<string> getJson(Uri requesturl)
+        {
+            using (var httpClient = new HttpClient())
+            {
+                var res = await httpClient.GetStringAsync(requesturl);
+                return res;
+            }    
         }
     }
 }

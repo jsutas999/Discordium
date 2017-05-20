@@ -13,7 +13,6 @@ namespace Discordium.Models
         public Song playing;
         public Song lastSong;
 
-
         public Song NextSong()
         {
             Song song = queue.Dequeue();
@@ -21,8 +20,5 @@ namespace Discordium.Models
             playing = song;
             return song;
         }
-
-
-
     }
 }
