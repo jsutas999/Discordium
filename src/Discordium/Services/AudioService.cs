@@ -27,7 +27,7 @@ namespace Discordium.Services
             _provider = provider;
         }
 
-        public async Task<int> AddSong(IGuild guild,IVoiceChannel target, string uri)
+        public async Task<string> AddSong(IGuild guild,IVoiceChannel target, string uri)
         {
             string fname = HashFileName(uri);
             bool gotTheFile = await getSongFromYoutubes(uri, fname);
@@ -42,15 +42,18 @@ namespace Discordium.Services
 
                     if(!_guildVoiceContext.TryAdd(guild.Id,audiocon))
                     {
-                        return -1;
+                        return null;
                     }
 
                 }
                 audiocon.queue.Enqueue(new Song(fname));
-                await JoinAudio(guild,target,audiocon);
+                JoinAudio(guild,target,audiocon);
+
+                return fname; 
+
             }
 
-            return 0;
+            return null;
         }
 
         public async Task JoinAudio(IGuild guid, IVoiceChannel target, GuildVoiceContext gvc)
@@ -203,6 +206,18 @@ namespace Discordium.Services
 
                     return songnames;
                 }            
+            }
+            return null;
+        }
+
+        public string getLastSong(IGuild guild)
+        {
+            GuildVoiceContext context;
+
+            if (_guildVoiceContext.TryGetValue(guild.Id, out context))
+            {
+                if (context.player != null)
+                    return context.lastSong.filename;
             }
             return null;
         }

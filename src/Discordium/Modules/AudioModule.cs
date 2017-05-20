@@ -23,7 +23,12 @@ namespace Discordium.Module
         public async Task JoinChannel(string uri ,IVoiceChannel channel = null)
         {
             channel = channel ?? (Context.Message.Author as IGuildUser)?.VoiceChannel;
-            await _service.AddSong(Context.Guild,channel,uri);
+            string song  = await _service.AddSong(Context.Guild,channel,uri);
+
+            if (song != null)
+                await ReplyAsync("Added song:  " + "**" + song + "**");
+            else
+                await ReplyAsync("Something went wrong");
         }
 
         [Command("skip")]
@@ -62,6 +67,17 @@ namespace Discordium.Module
             }
             else
                 await ReplyAsync(" :no_entry_sign:  There are no songs in the queue");
+        }
+
+        [Command("lastsong")]
+        public async Task LastSont()
+        {
+            string song = _service.getLastSong(Context.Guild);
+
+            if (song != null)
+                await ReplyAsync("Last song played was: " + "**" + song + "**");
+            else
+                await ReplyAsync(":no_entry_sign: I havent played any songs in a while");
         }
     }
 }
