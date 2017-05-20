@@ -1,15 +1,15 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
-using Discord;
-using Discord.Audio;
-using Discord.Commands;
-using System;
-using Discordium.Models;
-using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Diagnostics;
+using Discordium.Models;
+using Discord.Commands;
+using Discord.Audio;
+using System.Text;
+using System.IO;
+using Discord;
+using System;
 
 namespace Discordium.Services
 {
@@ -17,8 +17,6 @@ namespace Discordium.Services
     {
 
         private readonly ConcurrentDictionary<ulong, GuildVoiceContext> _guildVoiceContext = new ConcurrentDictionary<ulong, GuildVoiceContext>();
-
-        private static Process killer;
 
         private readonly CommandService _commands;
         private readonly IServiceProvider _provider;
@@ -57,8 +55,6 @@ namespace Discordium.Services
 
         public async Task JoinAudio(IGuild guid, IVoiceChannel target, GuildVoiceContext gvc)
         {
-
-
             if(gvc.client != null )
             {        
                 return;
@@ -74,7 +70,7 @@ namespace Discordium.Services
 
                     if (gvc.queue.Count > 0)
                     {
-                        Song song = gvc.queue.Dequeue();
+                        Song song = gvc.NextSong();
                         string filnename = "audio\\" + song.filename + ".m4a";
                         await SendAudioAsync(guid, null, filnename,gvc);
                     }        
@@ -94,7 +90,6 @@ namespace Discordium.Services
 
         }
 
-
         public void  Skip(IGuild guild)
         {
             GuildVoiceContext gvc;
@@ -103,7 +98,6 @@ namespace Discordium.Services
                 gvc.player.Kill();
             }
         }
-
 
         private Process CreateStreamFFMPEG(string path)
         {
@@ -141,11 +135,9 @@ namespace Discordium.Services
 
                 if(gvc.queue.Count > 0)
                 {
-                    Song song = gvc.queue.Dequeue();
+                    Song song = gvc.NextSong();
                     string filnename = "audio\\" + song.filename + ".m4a";
-                    await SendAudioAsync(guild, channel, filnename,gvc);
-
-
+                    await SendAudioAsync(guild, channel, filnename,gvc);  
                  }          
                 if (gvc.client.ConnectionState == ConnectionState.Connected && gvc.queue.Count == 0)
                     await LeaveAudio(guild);
@@ -180,6 +172,39 @@ namespace Discordium.Services
                 output = sb.ToString();
             }
             return output;
+        }
+
+        public string getCurrentlyPlayingSong(IGuild guild)
+        {
+            GuildVoiceContext context;
+
+            if (_guildVoiceContext.TryGetValue(guild.Id, out context))
+            {
+                if (context.player != null)
+                    return context.playing.filename;
+            }
+            return null;
+        }
+
+        public List<string> getQueue(IGuild guild)
+        {
+            GuildVoiceContext context;
+
+            if (_guildVoiceContext.TryGetValue(guild.Id, out context))
+            {
+                if (context.queue.Count > 0)
+                {
+                    List<string> songnames = new List<string>();
+
+                    foreach (Song s in context.queue)
+                    {
+                        songnames.Add(s.filename);
+                    }
+
+                    return songnames;
+                }            
+            }
+            return null;
         }
     }
 }

@@ -1,18 +1,10 @@
-﻿using Discord;
-using Discord.Audio;
-using Discord.Commands;
-using Discord.WebSocket;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Net;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
-using Discordium.Models;
-using System.IO;
 using Discordium.Services;
+using Discordium.Models;
+using Discord.Commands;
+using Discord.Audio;
+using Discord;
 
 namespace Discordium.Module
 {
@@ -20,7 +12,6 @@ namespace Discordium.Module
     {
 
         private static Queue<Song> queue = new Queue<Song>();
-        private static IAudioClient audioclient = null;
         private readonly AudioService _service;
 
         public AudioModule (AudioService service)
@@ -35,14 +26,42 @@ namespace Discordium.Module
             await _service.AddSong(Context.Guild,channel,uri);
         }
 
-        [Command("Skip")]
+        [Command("skip")]
         public async Task SkipSong()
         {
             await ReplyAsync("God bless memes");
             _service.Skip(Context.Guild);
         }
 
+        [Command("playing")]
+        public  async Task Playing()
+        {
+            string song = _service.getCurrentlyPlayingSong(Context.Guild);
 
+            if (song != null)
+            {
+                await ReplyAsync(" :white_check_mark: Currently playing: " + "**"+ song + "**");
+            }
+            else
+                await ReplyAsync(" :no_entry_sign: There is no song playing");
+        }
 
+        [Command("queue")]
+        public async Task SongQueue()
+        {
+            List<string> songs = _service.getQueue(Context.Guild);              
+            if (songs != null)
+            {
+                string reply = "Songs in the queue: \n";
+                foreach (string s in songs)
+                {
+                    reply += s;
+                    reply += " \n";
+                }
+                await ReplyAsync(reply);
+            }
+            else
+                await ReplyAsync(" :no_entry_sign:  There are no songs in the queue");
+        }
     }
 }

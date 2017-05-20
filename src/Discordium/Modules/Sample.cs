@@ -1,10 +1,6 @@
-﻿using Discord;
-using Discord.Audio;
+﻿using System.Threading.Tasks;
 using Discord.Commands;
-using Discord.WebSocket;
-using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
+
 
 namespace Discordium.Modules
 {

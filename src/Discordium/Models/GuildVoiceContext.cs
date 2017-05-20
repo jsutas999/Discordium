@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using Discord.Audio;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using Discordium.Models;
-using System.Collections.Generic;
+using Discord.Audio;
 
 namespace Discordium.Models
 {
@@ -10,5 +10,19 @@ namespace Discordium.Models
         public IAudioClient client;
         public Queue<Song> queue = new Queue<Song>();
         public Process player;
+        public Song playing;
+        public Song lastSong;
+
+
+        public Song NextSong()
+        {
+            Song song = queue.Dequeue();
+            lastSong = playing;
+            playing = song;
+            return song;
+        }
+
+
+
     }
 }

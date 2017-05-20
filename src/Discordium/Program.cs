@@ -1,10 +1,10 @@
-﻿using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
-using Discordium.Services;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
+using Discordium.Services;
+using Discord.WebSocket;
+using Discord.Commands;
+using Discord;
+using System;
 
 namespace Discordium
 {
@@ -42,7 +42,6 @@ namespace Discordium
 
             await Task.Delay(-1);                            // Prevent the console window from closing.
         }
-
 
         private IServiceProvider ConfigureServices()
         {
